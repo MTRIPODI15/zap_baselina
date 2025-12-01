@@ -1,0 +1,23 @@
+
+jobs:
+  security_scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4 # Tarea estándar: obtener el código
+
+      ## -- INICIO FASE A --
+      - name: A.1 Iniciar el Target (OWASP Juice Shop)
+        run: |
+          echo "Iniciando la aplicación vulnerable en el puerto 3000..."
+          docker run -d -p 3000:3000 --name juice-target bkimminich/juice-shop:latest
+
+- name: A.2 Health Check (Esperar con Bash)
+        run: |
+          echo "Esperando 30 segundos y probando si el Target responde..."
+          
+          # La opción --retry 5 intentará 5 veces si la conexión falla.
+          # La opción --fail asegura que si la URL no devuelve 2xx, el step falle.
+          curl --fail --retry 5 --retry-delay 5 http://localhost:3000/
+          
+          echo "Target Juice Shop listo y respondiendo correctamente."
+          ## -- FIN FASE A --
