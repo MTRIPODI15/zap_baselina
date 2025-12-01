@@ -21,12 +21,16 @@ jobs:
           # Inicia el contenedor de Juice Shop en detached mode (-d)
           docker run -d -p 3000:3000 --name juice-target bkimminich/juice-shop:latest
 
-      - name: A.2 Health Check (Esperar con Bash)
+      - name: A.2 Health Check (Esperar con Bash) - FIX
         run: |
+          echo "Dándole 30 segundos al Target para iniciar servicios internos..."
+          # Añadimos un sleep obligatorio para la inicialización
+          sleep 30
+          
           echo "Verificando si la app en http://localhost:3000/ está lista..."
           
-          # Health Check robusto con Bash: reintenta 5 veces con 5s de retraso
-          # El comando fallará (y detendrá el pipeline) si la app no responde 2xx.
+          # El Health Check robusto de Bash se ejecuta DESPUÉS del sleep.
+          # Esto reduce la probabilidad de encontrar el error (56).
           curl --fail --retry 5 --retry-delay 5 http://localhost:3000/
           
           echo "Target Juice Shop listo y respondiendo correctamente."
