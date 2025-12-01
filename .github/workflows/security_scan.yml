@@ -52,9 +52,9 @@ jobs:
           
           echo "Iniciando escaneo de ZAP contra $TARGET_URL..."
           
-          # CAMBIO CLAVE: Usamos 'stable' en lugar de 'weekly' para evitar errores de pull.
-          docker run --rm -v $(pwd):/zap/wrk/:rw owasp/zap2docker-stable zap-baseline.py \
+          # CAMBIO CLAVE: Usamos la versión explícita '2.12.0' para evitar problemas de etiquetas genéricas.
+          docker run --rm -v $(pwd):/zap/wrk/:rw owasp/zap2docker-stable:2.12.0 zap-baseline.py \
             -t $TARGET_URL \
             -r /zap/wrk/$REPORT_NAME
             
-          echo "Escaneo de ZAP completado. El reporte ha sido guardado en $REPORT_NAME."
+          echo "Intentando descargar ZAP versión 2.12.0..."
