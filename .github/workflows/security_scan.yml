@@ -45,15 +45,15 @@ jobs:
           docker stop juice-target
           docker rm juice-target
 
-      - name: B.1 Ejecutar ZAP Baseline Scan
+      - name: B.1 Ejecutar ZAP Baseline Scan - FIX
         run: |
           TARGET_URL="http://localhost:3000"
           REPORT_NAME="zap_baseline_report.html"
           
           echo "Iniciando escaneo de ZAP contra $TARGET_URL..."
           
-          # Comando Bash: Ejecuta ZAP, monta el volumen y genera el reporte.
-          docker run --rm -v $(pwd):/zap/wrk/:rw owasp/zap2docker-weekly zap-baseline.py \
+          # CAMBIO CLAVE: Usamos 'stable' en lugar de 'weekly' para evitar errores de pull.
+          docker run --rm -v $(pwd):/zap/wrk/:rw owasp/zap2docker-stable zap-baseline.py \
             -t $TARGET_URL \
             -r /zap/wrk/$REPORT_NAME
             
