@@ -1,23 +1,42 @@
+name: Prueba de Setup de Entorno (Fase A)
+
+# Se ejecuta cada vez que hay un push a la rama principal (main)
+on: 
+  push:
+    branches: [ "main" ]
 
 jobs:
-  security_scan:
+  security-setup-test:
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v4 # Tarea estándar: obtener el código
+      - uses: actions/checkout@v4
+        name: Descargar el Código
 
-      ## -- INICIO FASE A --
+      # --- FASE A: PREPARACIÓN DEL ENTORNO (Target) ---
+      
       - name: A.1 Iniciar el Target (OWASP Juice Shop)
         run: |
-          echo "Iniciando la aplicación vulnerable en el puerto 3000..."
+          echo "Iniciando la aplicación vulnerable de prueba..."
+          # Inicia el contenedor de Juice Shop en detached mode (-d)
           docker run -d -p 3000:3000 --name juice-target bkimminich/juice-shop:latest
 
-- name: A.2 Health Check (Esperar con Bash)
+      - name: A.2 Health Check (Esperar con Bash)
         run: |
-          echo "Esperando 30 segundos y probando si el Target responde..."
+          echo "Verificando si la app en http://localhost:3000/ está lista..."
           
-          # La opción --retry 5 intentará 5 veces si la conexión falla.
-          # La opción --fail asegura que si la URL no devuelve 2xx, el step falle.
+          # Health Check robusto con Bash: reintenta 5 veces con 5s de retraso
+          # El comando fallará (y detendrá el pipeline) si la app no responde 2xx.
           curl --fail --retry 5 --retry-delay 5 http://localhost:3000/
           
           echo "Target Juice Shop listo y respondiendo correctamente."
-          ## -- FIN FASE A --
+          
+      # --- LIMPIEZA INICIAL (Es temporalmente buena práctica) ---
+      
+      # Añadimos un paso simple de limpieza para no dejar el contenedor corriendo
+      - name: A.3 Limpieza de Contenedor (Bash)
+        if: always() # Asegura que se ejecute incluso si el Health Check fallara
+        run: |
+          echo "Deteniendo y eliminando el Target para liberar recursos."
+          docker stop juice-target
+          docker rm juice-target
