@@ -1,12 +1,12 @@
-name: Prueba de Setup de Entorno (Fase A)
+name: Seguridad - ZAP Baseline Scan
 
-# Se ejecuta cada vez que hay un push a la rama principal (main)
+# Se ejecuta en cada push a la rama principal (main)
 on: 
   push:
     branches: [ "main" ]
 
 jobs:
-  security-setup-test:
+  security-check:
     runs-on: ubuntu-latest
     
     steps:
@@ -21,40 +21,43 @@ jobs:
           # Inicia el contenedor de Juice Shop en detached mode (-d)
           docker run -d -p 3000:3000 --name juice-target bkimminich/juice-shop:latest
 
-      - name: A.2 Health Check (Esperar con Bash) - FIX
+      - name: A.2 Health Check (Esperar con Bash) - FIX de Estabilidad
         run: |
           echo "Dándole 30 segundos al Target para iniciar servicios internos..."
-          # Añadimos un sleep obligatorio para la inicialización
-          sleep 30
+          sleep 30 # Sleep obligatorio por ser una aplicación Node.js
           
           echo "Verificando si la app en http://localhost:3000/ está lista..."
-          
-          # El Health Check robusto de Bash se ejecuta DESPUÉS del sleep.
-          # Esto reduce la probabilidad de encontrar el error (56).
+          # Health Check robusto: reintenta 5 veces, falla si no obtiene 2xx
           curl --fail --retry 5 --retry-delay 5 http://localhost:3000/
           
           echo "Target Juice Shop listo y respondiendo correctamente."
-          
-      # --- LIMPIEZA INICIAL (Es temporalmente buena práctica) ---
+
+      # --- FASE B: EJECUCIÓN DEL SCANEO (USANDO ACTION OFICIAL) ---
       
-      # Añadimos un paso simple de limpieza para no dejar el contenedor corriendo
-      - name: A.3 Limpieza de Contenedor (Bash)
-        if: always() # Asegura que se ejecute incluso si el Health Check fallara
+      - name: B.1 Ejecutar ZAP Baseline Scan (Action)
+        # La action se encarga de descargar la imagen ZAP de forma estable
+        uses: zaproxy/action-baseline@v0.12.0 
+        with:
+          target: 'http://localhost:3000'
+          # Los códigos de error de ZAP se manejan por la action.
+          # default-max-alerts: Si se excede este valor, el step falla.
+          # Un valor de 0 asegura que el pipeline falle si hay CUALQUIER alerta Alta o Media.
+          default-max-alerts: 0 
+          
+      # --- FASE C: REPORTE Y LIMPIEZA ---
+
+      - name: C.1 Limpieza de Contenedor (Bash)
+        # La limpieza DEBE ejecutarse siempre, incluso si el step de ZAP (B.1) falla.
+        if: always() 
         run: |
           echo "Deteniendo y eliminando el Target para liberar recursos."
           docker stop juice-target
           docker rm juice-target
 
-      - name: B.1 Ejecutar ZAP Baseline Scan - FIX
-        run: |
-          TARGET_URL="http://localhost:3000"
-          REPORT_NAME="zap_baseline_report.html"
-          
-          echo "Iniciando escaneo de ZAP contra $TARGET_URL..."
-          
-          # CAMBIO CLAVE: Usamos la versión explícita '2.12.0' para evitar problemas de etiquetas genéricas.
-          docker run --rm -v $(pwd):/zap/wrk/:rw owasp/zap2docker-stable:2.12.0 zap-baseline.py \
-            -t $TARGET_URL \
-            -r /zap/wrk/$REPORT_NAME
-            
-          echo "Intentando descargar ZAP versión 2.12.0..."
+      - name: C.2 Subir el Reporte ZAP como Artefacto
+        # La action de ZAP genera un archivo llamado zap_report.html
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-security-report
+          path: zap_report.html
