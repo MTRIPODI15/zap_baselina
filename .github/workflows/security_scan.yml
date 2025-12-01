@@ -34,20 +34,20 @@ jobs:
 
       # --- FASE B: EJECUCIÓN DEL SCANEO (USANDO ACTION OFICIAL) ---
       
-      - name: B.1 Ejecutar ZAP Baseline Scan (Action)
-        # La action se encarga de descargar la imagen ZAP de forma estable
+      # ... (Contenido anterior, Fase A.1 y A.2)
+
+      # --- FASE B: EJECUCIÓN DEL SCANEO (USANDO ACTION OFICIAL) ---
+      
+      - name: B.1 Ejecutar ZAP Baseline Scan (Action Corregida)
         uses: zaproxy/action-baseline@v0.12.0 
         with:
           target: 'http://localhost:3000'
-          # Los códigos de error de ZAP se manejan por la action.
-          # default-max-alerts: Si se excede este valor, el step falla.
-          # Un valor de 0 asegura que el pipeline falle si hay CUALQUIER alerta Alta o Media.
-          default-max-alerts: 0 
+          # CORRECCIÓN CLAVE: Usamos 'fail_action' en lugar del obsoleto 'default-max-alerts'
+          fail_action: true # Si hay alguna alerta (WARN o FAIL), el step fallará.
           
       # --- FASE C: REPORTE Y LIMPIEZA ---
 
       - name: C.1 Limpieza de Contenedor (Bash)
-        # La limpieza DEBE ejecutarse siempre, incluso si el step de ZAP (B.1) falla.
         if: always() 
         run: |
           echo "Deteniendo y eliminando el Target para liberar recursos."
@@ -55,9 +55,9 @@ jobs:
           docker rm juice-target
 
       - name: C.2 Subir el Reporte ZAP como Artefacto
-        # La action de ZAP genera un archivo llamado zap_report.html
         uses: actions/upload-artifact@v4
         if: always()
+        # El nombre del archivo que genera la action es 'zap_report.html' por defecto
         with:
           name: zap-security-report
           path: zap_report.html
